@@ -14,7 +14,7 @@ export async function listarEditorias(): Promise<Editoria[]> {
 
 export async function listarArtigos(opcoes: { editoriaSlug?: string; tag?: string; limite?: number } = {}) {
   if (!supabaseConfigurado()) {
-    let lista = ARTIGOS_EXEMPLO;
+    let lista = [...ARTIGOS_EXEMPLO].sort((a, b) => (b.publicado_em || '').localeCompare(a.publicado_em || ''));
     if (opcoes.editoriaSlug) lista = lista.filter((a) => a.editoria?.slug === opcoes.editoriaSlug);
     if (opcoes.tag) lista = lista.filter((a) => a.tags.includes(opcoes.tag!));
     return lista.slice(0, opcoes.limite || 100);
