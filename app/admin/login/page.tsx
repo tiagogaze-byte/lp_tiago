@@ -1,31 +1,11 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { FormLogin } from '@/components/admin/FormLogin';
+import { sessaoAtual } from '@/lib/auth';
+import { existeUsuario } from '../acoes';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabaseNavegador } from '@/lib/supabase/client';
-
-export default function Login() {
-  const router = useRouter();
-  const [erro, setErro] = useState('');
-  const [enviando, setEnviando] = useState(false);
-
-  async function entrar(evento: React.FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
-    setErro('');
-    setEnviando(true);
-    const dados = new FormData(evento.currentTarget);
-    const { error } = await supabaseNavegador().auth.signInWithPassword({
-      email: String(dados.get('email')),
-      password: String(dados.get('senha')),
-    });
-    setEnviando(false);
-    if (error) {
-      setErro('E-mail ou senha incorretos. Confira e tente de novo.');
-      return;
-    }
-    router.replace('/admin');
-    router.refresh();
-  }
+export default async function Login() {
+  if (!(await existeUsuario())) redirect('/admin/configurar');
+  if (await sessaoAtual().catch(() => null)) redirect('/admin');
 
   return (
     <div className="container login-caixa">
@@ -35,20 +15,7 @@ export default function Login() {
         </span>
         <h1 style={{ fontSize: '1.8rem' }}>Entrar no painel</h1>
       </div>
-      <form onSubmit={entrar} className="painel">
-        <div className="campo">
-          <label htmlFor="email">E-mail</label>
-          <input id="email" name="email" type="email" required autoComplete="email" />
-        </div>
-        <div className="campo">
-          <label htmlFor="senha">Senha</label>
-          <input id="senha" name="senha" type="password" required autoComplete="current-password" />
-        </div>
-        {erro && <p className="aviso aviso-erro">{erro}</p>}
-        <button className="botao botao-primario" type="submit" disabled={enviando}>
-          {enviando ? 'Entrando...' : 'Entrar'}
-        </button>
-      </form>
+      <FormLogin />
     </div>
   );
 }

@@ -7,32 +7,25 @@ Site pessoal do Tiago Azevedo, com blog editorial e painel próprio para publica
 | Parte | O que usa | Para quê |
 | --- | --- | --- |
 | Site | Next.js 14, hospedado na Vercel | Páginas, blog e painel |
-| Banco | Supabase (PostgreSQL) | Artigos, editorias e login do painel |
-| Imagens | Supabase Storage, pasta `capas` | Capas e imagens dos artigos |
+| Banco | Neon (PostgreSQL), conectado pela aba Storage da Vercel | Artigos, editorias, clientes e logins |
+| Imagens | Vercel Blob (tiagogaze-imagens) | Capas e imagens dos artigos |
 | Textos fixos | `content/site.ts` | Soluções, ferramentas, trajetória, contato |
 
 Cada publicação no painel atualiza o site na hora, sem novo deploy.
 
 ## Ligar o banco (uma vez só)
 
-1. Crie um projeto em supabase.com (o plano gratuito serve).
-2. Abra **SQL Editor**, cole o conteúdo de `supabase/schema.sql` e clique em **Run**. Isso cria as tabelas, as regras de segurança, a pasta de imagens e as sete editorias.
-3. Em **Authentication > Users > Add user**, crie seu login com `tiago.gaze@gmail.com` e uma senha forte. O arquivo de esquema já cadastra esse e-mail como administrador.
-4. Em **Project Settings > API**, copie a **Project URL** e a chave **anon public**.
+1. Na Vercel, aba **Storage**, conecte um banco **Neon** e um **Blob** ao projeto. As chaves vão sozinhas para o projeto.
+2. Publique o site e abra `/admin/configurar`.
+3. Crie seu acesso (nome, e-mail e senha). Nesse momento o banco é preparado e os artigos e editorias atuais são copiados para ele.
 
-## Ligar na Vercel
+Essa tela só aparece uma vez. Depois disso, o acesso é por `/admin/login`.
 
-No projeto `lp-tiago` da Vercel, em **Settings > Environment Variables**, cadastre:
+Enquanto o banco não estiver configurado, o blog mostra os artigos que estão em `content/exemplos.ts`.
 
-| Nome | Valor |
-| --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | a Project URL do Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | a chave anon public |
-| `NEXT_PUBLIC_SITE_URL` | `https://www.tiagogaze.com.br` |
+## Domínio
 
-Depois, em **Settings > Domains**, adicione `www.tiagogaze.com.br` e `tiagogaze.com.br`, e siga as instruções de DNS que a Vercel mostrar no seu registro de domínio.
-
-Enquanto o banco não estiver ligado, o blog mostra três artigos de exemplo e o painel avisa que falta configurar.
+Em **Settings > Domains** do projeto na Vercel, adicione `www.tiagogaze.com.br` e `tiagogaze.com.br` e siga as instruções de DNS que a Vercel mostrar no seu registro de domínio.
 
 ## Publicar um artigo
 
@@ -41,6 +34,12 @@ Enquanto o banco não estiver ligado, o blog mostra três artigos de exemplo e o
 3. Preencha título, resumo, texto, editoria, tags, palavra-chave e perguntas frequentes.
 4. Escolha o status: **Rascunho** (só você vê), **Agendado** (entra no ar na data escolhida) ou **Publicado**.
 5. Salve. A caixa **Checagem** mostra o que falta para o artigo render bem no Google e nas IAs.
+
+Para editar, clique no artigo na lista. A capa fica na coluna da direita (**Enviar imagem**, até 4 MB, ideal 1600 × 900 px).
+
+## Agenda editorial
+
+Em **Painel > Agenda** você vê o mês em calendário: publicados em verde, agendados em amarelo. Clique no **+** de um dia para começar um artigo já programado para aquela data. Artigos agendados entram no ar sozinhos na data marcada (em até um minuto).
 
 Formatação do texto: `## Subtítulo`, `**negrito**`, `*itálico*`, `[texto do link](/ferramentas)`, `- item de lista`. A barra do editor faz isso com um clique, e a aba **Prévia** mostra como vai ficar.
 
@@ -66,7 +65,7 @@ O site já gera, sozinho e sempre atualizado:
 
 ```bash
 npm install
-cp .env.example .env.local   # e preencha com os dados do Supabase
+cp .env.example .env.local   # e preencha com os dados do Neon e do Blob
 npm run dev                  # abre em http://localhost:3000
 ```
 

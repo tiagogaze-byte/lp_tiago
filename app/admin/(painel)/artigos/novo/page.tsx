@@ -1,14 +1,15 @@
 import Link from 'next/link';
 import { FormArtigo } from '@/components/admin/FormArtigo';
-import { supabaseServidor } from '@/lib/supabase/server';
-import type { Editoria } from '@/lib/tipos';
+import { editoriasDoCliente, titulosPublicados } from '@/lib/admin';
+import { exigirSessao } from '@/lib/auth';
 
-export default async function NovoArtigo() {
-  const supabase = supabaseServidor();
-  const [{ data: editorias }, { data: outros }] = await Promise.all([
-    supabase.from('editorias').select('*').order('ordem'),
-    supabase.from('artigos').select('id, titulo').eq('status', 'publicado').order('publicado_em', { ascending: false }).limit(200),
-  ]);
+type Props = { searchParams: { data?: string } };
+
+export default async function NovoArtigo({ searchParams }: Props) {
+  const { clienteId } = await exigirSessao();
+  const [editorias, outros] = await Promise.all([editoriasDoCliente(clienteId), titulosPublicados(clienteId)]);
+  // Vindo da agenda, o artigo já nasce com a data escolhida às 9h.
+  const dataInicial = searchParams.data && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.data) ? `${searchParams.data}T09:00` : undefined;
 
   return (
     <>
@@ -20,7 +21,7 @@ export default async function NovoArtigo() {
           <h1>Novo artigo</h1>
         </div>
       </div>
-      <FormArtigo editorias={(editorias || []) as Editoria[]} outros={outros || []} />
+      <FormArtigo editorias={editorias} outros={outros} dataInicial={dataInicial} />
     </>
   );
 }

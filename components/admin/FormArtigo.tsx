@@ -4,7 +4,6 @@ import { useMemo, useRef, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { marked } from 'marked';
 import { excluirArtigo, salvarArtigo, type Resultado } from '@/app/admin/acoes';
-import { supabaseNavegador } from '@/lib/supabase/client';
 import type { Artigo, Editoria, ItemFaq, StatusArtigo } from '@/lib/tipos';
 import { gerarSlug, tempoDeLeitura } from '@/lib/util';
 
@@ -13,6 +12,7 @@ type Props = {
   editorias: Editoria[];
   outros: { id: string; titulo: string }[];
   avisoInicial?: string;
+  dataInicial?: string;
 };
 
 function paraDataLocal(iso: string | null | undefined) {
@@ -38,7 +38,7 @@ function BotaoSalvar({ status }: { status: StatusArtigo }) {
   );
 }
 
-export function FormArtigo({ artigo, editorias, outros, avisoInicial }: Props) {
+export function FormArtigo({ artigo, editorias, outros, avisoInicial, dataInicial }: Props) {
   const [estado, acao] = useFormState<Resultado | null, FormData>(salvarArtigo, avisoInicial ? { ok: true, mensagem: avisoInicial } : null);
 
   const [titulo, setTitulo] = useState(artigo?.titulo || '');
@@ -50,7 +50,7 @@ export function FormArtigo({ artigo, editorias, outros, avisoInicial }: Props) {
   const [capaUrl, setCapaUrl] = useState(artigo?.capa_url || '');
   const [capaAlt, setCapaAlt] = useState(artigo?.capa_alt || '');
   const [faq, setFaq] = useState<ItemFaq[]>(artigo?.faq?.length ? artigo.faq : [{ pergunta: '', resposta: '' }]);
-  const [status, setStatus] = useState<StatusArtigo>(artigo?.status || 'rascunho');
+  const [status, setStatus] = useState<StatusArtigo>(artigo?.status || (dataInicial ? 'agendado' : 'rascunho'));
   const [aba, setAba] = useState<'escrever' | 'previa'>('escrever');
   const [enviandoImagem, setEnviandoImagem] = useState(false);
   const [erroImagem, setErroImagem] = useState('');
@@ -87,18 +87,23 @@ export function FormArtigo({ artigo, editorias, outros, avisoInicial }: Props) {
   async function enviarImagem(arquivo: File, destino: 'capa' | 'corpo') {
     setErroImagem('');
     setEnviandoImagem(true);
-    const extensao = arquivo.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const caminho = `${new Date().toISOString().slice(0, 7)}/${Date.now()}-${slugFinal || 'imagem'}.${extensao}`;
-    const supabase = supabaseNavegador();
-    const { error } = await supabase.storage.from('capas').upload(caminho, arquivo, { cacheControl: '31536000', upsert: false });
-    setEnviandoImagem(false);
-    if (error) {
-      setErroImagem(`Não foi possível enviar a imagem: ${error.message}`);
-      return;
+    const dados = new FormData();
+    dados.append('arquivo', arquivo);
+    dados.append('nome', slugFinal || titulo || 'imagem');
+    try {
+      const resposta = await fetch('/api/upload', { method: 'POST', body: dados });
+      const json = (await resposta.json()) as { url?: string; erro?: string };
+      if (!resposta.ok || !json.url) {
+        setErroImagem(json.erro || 'Não foi possível enviar a imagem.');
+        return;
+      }
+      if (destino === 'capa') setCapaUrl(json.url);
+      else envolver('![', `](${json.url})`, 'descreva a imagem');
+    } catch {
+      setErroImagem('Não foi possível enviar a imagem. Confira sua conexão e tente de novo.');
+    } finally {
+      setEnviandoImagem(false);
     }
-    const { data } = supabase.storage.from('capas').getPublicUrl(caminho);
-    if (destino === 'capa') setCapaUrl(data.publicUrl);
-    else envolver('![', `](${data.publicUrl})`, 'descreva a imagem');
   }
 
   // ---------- Checagem de SEO e busca por IA ----------
@@ -263,7 +268,7 @@ export function FormArtigo({ artigo, editorias, outros, avisoInicial }: Props) {
             </div>
             <div className="campo">
               <label htmlFor="publicado_em">Data de publicação</label>
-              <input id="publicado_em" name="publicado_em" type="datetime-local" defaultValue={paraDataLocal(artigo?.publicado_em)} />
+              <input id="publicado_em" name="publicado_em" type="datetime-local" defaultValue={paraDataLocal(artigo?.publicado_em) || dataInicial} />
               <span className="ajuda">Horário de Brasília. Em branco, publica agora.</span>
             </div>
             <BotaoSalvar status={status} />
@@ -326,7 +331,7 @@ export function FormArtigo({ artigo, editorias, outros, avisoInicial }: Props) {
               </div>
             ) : (
               <p className="ajuda" style={{ fontSize: '0.86rem', color: 'var(--texto-fraco)' }}>
-                Sem capa, o site usa um fundo com o nome da editoria.
+                Sem capa, o site usa um fundo com o nome da editoria. Tamanho ideal: 1600 × 900 px, até 4 MB.
               </p>
             )}
             <label className="botao botao-secundario botao-pequeno" style={{ cursor: 'pointer' }}>

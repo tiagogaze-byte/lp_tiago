@@ -1,18 +1,21 @@
 import { FormEditoria } from '@/components/admin/FormEditoria';
-import { supabaseServidor } from '@/lib/supabase/server';
-import type { Editoria } from '@/lib/tipos';
+import { exigirSessao } from '@/lib/auth';
+import { consulta } from '@/lib/db';
+import { editoriasDoCliente } from '@/lib/admin';
 import { excluirEditoria } from '../../acoes';
 
 type Props = { searchParams: { erro?: string; excluida?: string } };
 
 export default async function Editorias({ searchParams }: Props) {
-  const supabase = supabaseServidor();
-  const [{ data }, { data: artigos }] = await Promise.all([
-    supabase.from('editorias').select('*').order('ordem'),
-    supabase.from('artigos').select('editoria_id'),
+  const { clienteId } = await exigirSessao();
+  const [editorias, uso] = await Promise.all([
+    editoriasDoCliente(clienteId),
+    consulta<{ editoria_id: string; total: number }>(
+      'select editoria_id, count(*)::int as total from artigos where cliente_id = $1 and editoria_id is not null group by editoria_id',
+      [clienteId],
+    ),
   ]);
-  const editorias = (data || []) as Editoria[];
-  const total = (id: string) => (artigos || []).filter((a) => a.editoria_id === id).length;
+  const total = (id: string) => uso.find((u) => u.editoria_id === id)?.total || 0;
 
   return (
     <>

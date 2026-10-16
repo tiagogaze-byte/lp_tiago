@@ -2,22 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { supabaseServidor } from '@/lib/supabase/server';
+import { ARTIGOS_EXEMPLO, EDITORIAS_EXEMPLO } from '@/content/exemplos';
+import { conferirSenha, criarSessao, encerrarSessao, exigirSessao, gerarHash } from '@/lib/auth';
+import { CLIENTE_PADRAO, consulta, umaLinha } from '@/lib/db';
+import { ESTRUTURA_DO_BANCO } from '@/lib/schema';
 import type { ItemFaq, StatusArtigo } from '@/lib/tipos';
 import { gerarSlug, listaDeTexto } from '@/lib/util';
 
 export type Resultado = { ok: boolean; mensagem: string; id?: string };
-
-async function exigirAdmin() {
-  const supabase = supabaseServidor();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/admin/login');
-  const { data: ehAdmin } = await supabase.rpc('is_admin');
-  if (!ehAdmin) throw new Error('Este login não tem permissão de administrador.');
-  return supabase;
-}
 
 function revalidarBlog(slug?: string, editoriaSlug?: string) {
   revalidatePath('/');
@@ -29,12 +21,103 @@ function revalidarBlog(slug?: string, editoriaSlug?: string) {
   if (editoriaSlug) revalidatePath(`/blog/editoria/${editoriaSlug}`);
 }
 
+// ---------- Primeira configuração ----------
+
+export async function existeUsuario() {
+  try {
+    const linha = await umaLinha<{ total: number }>('select count(*)::int as total from usuarios');
+    return (linha?.total || 0) > 0;
+  } catch {
+    return false; // tabelas ainda não existem
+  }
+}
+
+export async function configurarPortal(_anterior: Resultado | null, form: FormData): Promise<Resultado> {
+  if (await existeUsuario()) return { ok: false, mensagem: 'O painel já foi configurado. Entre com seu e-mail e senha.' };
+
+  const nome = String(form.get('nome') || '').trim();
+  const email = String(form.get('email') || '').trim().toLowerCase();
+  const senha = String(form.get('senha') || '');
+  const confirmacao = String(form.get('confirmacao') || '');
+  if (!nome || !email) return { ok: false, mensagem: 'Preencha nome e e-mail.' };
+  if (senha.length < 10) return { ok: false, mensagem: 'A senha precisa ter pelo menos 10 caracteres.' };
+  if (senha !== confirmacao) return { ok: false, mensagem: 'As duas senhas não são iguais.' };
+
+  try {
+    for (const comando of ESTRUTURA_DO_BANCO) await consulta(comando);
+
+    const cliente = await umaLinha<{ id: string }>(
+      `insert into clientes (slug, nome, dominio) values ($1, $2, $3)
+       on conflict (slug) do update set nome = excluded.nome returning id`,
+      [CLIENTE_PADRAO, 'Tiago Azevedo', 'tiagogaze.com.br'],
+    );
+    const clienteId = cliente!.id;
+
+    // Editorias iniciais
+    const mapaEditorias: Record<string, string> = {};
+    for (const e of EDITORIAS_EXEMPLO) {
+      const linha = await umaLinha<{ id: string }>(
+        `insert into editorias (cliente_id, nome, slug, descricao, ordem) values ($1, $2, $3, $4, $5)
+         on conflict (cliente_id, slug) do update set nome = excluded.nome returning id`,
+        [clienteId, e.nome, e.slug, e.descricao, e.ordem],
+      );
+      mapaEditorias[e.id] = linha!.id;
+    }
+
+    // Artigos que já estavam no site
+    for (const a of ARTIGOS_EXEMPLO) {
+      await consulta(
+        `insert into artigos (cliente_id, titulo, slug, resumo, corpo, editoria_id, tags, palavra_chave, palavras_secundarias,
+           capa_url, capa_alt, faq, status, publicado_em)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14)
+         on conflict (cliente_id, slug) do nothing`,
+        [
+          clienteId, a.titulo, a.slug, a.resumo, a.corpo, a.editoria_id ? mapaEditorias[a.editoria_id] : null, a.tags,
+          a.palavra_chave, a.palavras_secundarias, a.capa_url, a.capa_alt, JSON.stringify(a.faq), a.status, a.publicado_em,
+        ],
+      );
+    }
+
+    const usuario = await umaLinha<{ id: string }>(
+      `insert into usuarios (cliente_id, nome, email, senha_hash, perfil) values ($1, $2, $3, $4, 'dono') returning id`,
+      [clienteId, nome, email, await gerarHash(senha)],
+    );
+    criarSessao(usuario!.id);
+  } catch (erro) {
+    return { ok: false, mensagem: `Não foi possível configurar o banco: ${(erro as Error).message}` };
+  }
+
+  revalidarBlog();
+  redirect('/admin?bemvindo=1');
+}
+
+// ---------- Sessão ----------
+
+export async function entrar(_anterior: Resultado | null, form: FormData): Promise<Resultado> {
+  const email = String(form.get('email') || '').trim().toLowerCase();
+  const senha = String(form.get('senha') || '');
+  const usuario = await umaLinha<{ id: string; senha_hash: string }>('select id, senha_hash from usuarios where email = $1', [email]).catch(
+    () => null,
+  );
+  if (!usuario || !(await conferirSenha(senha, usuario.senha_hash))) {
+    return { ok: false, mensagem: 'E-mail ou senha incorretos. Confira e tente de novo.' };
+  }
+  await consulta('update usuarios set ultimo_acesso = now() where id = $1', [usuario.id]);
+  criarSessao(usuario.id);
+  redirect('/admin');
+}
+
+export async function sair() {
+  encerrarSessao();
+  redirect('/admin/login');
+}
+
 // ---------- Artigos ----------
 
 export async function salvarArtigo(_anterior: Resultado | null, form: FormData): Promise<Resultado> {
-  const supabase = await exigirAdmin();
+  const { clienteId } = await exigirSessao();
 
-  const id = String(form.get('id') || '') || undefined;
+  const id = String(form.get('id') || '') || null;
   const titulo = String(form.get('titulo') || '').trim();
   const slug = gerarSlug(String(form.get('slug') || '') || titulo);
   const status = String(form.get('status') || 'rascunho') as StatusArtigo;
@@ -57,88 +140,103 @@ export async function salvarArtigo(_anterior: Resultado | null, form: FormData):
     faq = [];
   }
 
-  const registro = {
-    titulo,
-    slug,
-    resumo: String(form.get('resumo') || '').trim(),
-    corpo: String(form.get('corpo') || ''),
-    editoria_id: String(form.get('editoria_id') || '') || null,
-    tags: listaDeTexto(form.get('tags')),
-    palavra_chave: String(form.get('palavra_chave') || '').trim(),
-    palavras_secundarias: listaDeTexto(form.get('palavras_secundarias')),
-    capa_url: String(form.get('capa_url') || '') || null,
-    capa_alt: String(form.get('capa_alt') || '').trim(),
-    faq,
-    relacionados: form.getAll('relacionados').map(String).filter((r) => r && r !== id),
-    status,
-    publicado_em,
-  };
+  const editoriaId = String(form.get('editoria_id') || '') || null;
+  const relacionados = form.getAll('relacionados').map(String).filter((r) => r && r !== id);
 
-  const { data: conflito } = await supabase.from('artigos').select('id').eq('slug', slug).maybeSingle();
+  const conflito = await umaLinha<{ id: string }>('select id from artigos where cliente_id = $1 and slug = $2', [clienteId, slug]);
   if (conflito && conflito.id !== id) return { ok: false, mensagem: `Já existe outro artigo com o slug “${slug}”. Troque o slug.` };
 
-  const consulta = id
-    ? supabase.from('artigos').update(registro).eq('id', id).select('id, editoria:editorias(slug)').single()
-    : supabase.from('artigos').insert(registro).select('id, editoria:editorias(slug)').single();
-  const { data, error } = await consulta;
-  if (error || !data) return { ok: false, mensagem: `Não foi possível salvar: ${error?.message || 'erro desconhecido'}.` };
+  const valores = [
+    titulo, slug, String(form.get('resumo') || '').trim(), String(form.get('corpo') || ''), editoriaId,
+    listaDeTexto(form.get('tags')), String(form.get('palavra_chave') || '').trim(), listaDeTexto(form.get('palavras_secundarias')),
+    String(form.get('capa_url') || '') || null, String(form.get('capa_alt') || '').trim(), JSON.stringify(faq), relacionados, status, publicado_em,
+  ];
 
-  const ed = data.editoria as unknown as { slug: string } | null;
+  let salvoId: string;
+  try {
+    if (id) {
+      const linha = await umaLinha<{ id: string }>(
+        `update artigos set titulo=$1, slug=$2, resumo=$3, corpo=$4, editoria_id=$5, tags=$6, palavra_chave=$7, palavras_secundarias=$8,
+           capa_url=$9, capa_alt=$10, faq=$11::jsonb, relacionados=$12::uuid[], status=$13, publicado_em=$14, atualizado_em=now()
+         where id=$15 and cliente_id=$16 returning id`,
+        [...valores, id, clienteId],
+      );
+      if (!linha) return { ok: false, mensagem: 'Artigo não encontrado.' };
+      salvoId = linha.id;
+    } else {
+      const linha = await umaLinha<{ id: string }>(
+        `insert into artigos (titulo, slug, resumo, corpo, editoria_id, tags, palavra_chave, palavras_secundarias, capa_url, capa_alt,
+           faq, relacionados, status, publicado_em, cliente_id)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12::uuid[],$13,$14,$15) returning id`,
+        [...valores, clienteId],
+      );
+      salvoId = linha!.id;
+    }
+  } catch (erro) {
+    return { ok: false, mensagem: `Não foi possível salvar: ${(erro as Error).message}` };
+  }
+
+  const ed = editoriaId ? await umaLinha<{ slug: string }>('select slug from editorias where id = $1', [editoriaId]) : null;
   revalidarBlog(slug, ed?.slug);
-  const textos: Record<StatusArtigo, string> = {
-    rascunho: 'Rascunho salvo.',
-    agendado: 'Artigo agendado.',
-    publicado: 'Artigo publicado.',
-  };
-  if (!id) redirect(`/admin/artigos/${data.id}?salvo=${status}`);
-  return { ok: true, mensagem: textos[status], id: data.id };
+  revalidatePath('/admin/agenda');
+
+  if (!id) redirect(`/admin/artigos/${salvoId}?salvo=${status}`);
+  const textos: Record<StatusArtigo, string> = { rascunho: 'Rascunho salvo.', agendado: 'Artigo agendado.', publicado: 'Artigo publicado.' };
+  return { ok: true, mensagem: textos[status], id: salvoId };
 }
 
 export async function excluirArtigo(form: FormData) {
-  const supabase = await exigirAdmin();
-  const id = String(form.get('id'));
-  const { data } = await supabase.from('artigos').delete().eq('id', id).select('slug').single();
-  revalidarBlog(data?.slug);
+  const { clienteId } = await exigirSessao();
+  const linha = await umaLinha<{ slug: string }>('delete from artigos where id = $1 and cliente_id = $2 returning slug', [
+    String(form.get('id')),
+    clienteId,
+  ]);
+  revalidarBlog(linha?.slug);
   redirect('/admin?excluido=1');
 }
 
 // ---------- Editorias ----------
 
 export async function salvarEditoria(_anterior: Resultado | null, form: FormData): Promise<Resultado> {
-  const supabase = await exigirAdmin();
-  const id = String(form.get('id') || '') || undefined;
+  const { clienteId } = await exigirSessao();
+  const id = String(form.get('id') || '') || null;
   const nome = String(form.get('nome') || '').trim();
   if (!nome) return { ok: false, mensagem: 'A editoria precisa de um nome.' };
-  const registro = {
-    nome,
-    slug: gerarSlug(String(form.get('slug') || '') || nome),
-    descricao: String(form.get('descricao') || '').trim(),
-    ordem: Number(form.get('ordem') || 0),
-    ativa: form.get('ativa') === 'on',
-  };
-  const { error } = id ? await supabase.from('editorias').update(registro).eq('id', id) : await supabase.from('editorias').insert(registro);
-  if (error) {
-    const msg = error.code === '23505' ? 'Já existe uma editoria com esse slug.' : error.message;
+  const slug = gerarSlug(String(form.get('slug') || '') || nome);
+  const descricao = String(form.get('descricao') || '').trim();
+  const ordem = Number(form.get('ordem') || 0);
+  const ativa = form.get('ativa') === 'on';
+
+  try {
+    if (id) {
+      await consulta('update editorias set nome=$1, slug=$2, descricao=$3, ordem=$4, ativa=$5 where id=$6 and cliente_id=$7', [
+        nome, slug, descricao, ordem, ativa, id, clienteId,
+      ]);
+    } else {
+      await consulta('insert into editorias (cliente_id, nome, slug, descricao, ordem, ativa) values ($1,$2,$3,$4,$5,$6)', [
+        clienteId, nome, slug, descricao, ordem, ativa,
+      ]);
+    }
+  } catch (erro) {
+    const msg = String((erro as Error).message).includes('duplicate') ? 'Já existe uma editoria com esse slug.' : (erro as Error).message;
     return { ok: false, mensagem: `Não foi possível salvar: ${msg}` };
   }
-  revalidarBlog(undefined, registro.slug);
+  revalidarBlog(undefined, slug);
   revalidatePath('/admin/editorias');
   return { ok: true, mensagem: id ? 'Editoria atualizada.' : 'Editoria criada.' };
 }
 
 export async function excluirEditoria(form: FormData) {
-  const supabase = await exigirAdmin();
+  const { clienteId } = await exigirSessao();
   const id = String(form.get('id'));
-  const { count } = await supabase.from('artigos').select('id', { count: 'exact', head: true }).eq('editoria_id', id);
-  if (count && count > 0) redirect(`/admin/editorias?erro=${encodeURIComponent(`Essa editoria tem ${count} artigo(s). Mova os artigos ou desative a editoria em vez de excluir.`)}`);
-  await supabase.from('editorias').delete().eq('id', id);
+  const uso = await umaLinha<{ total: number }>('select count(*)::int as total from artigos where editoria_id = $1 and cliente_id = $2', [
+    id,
+    clienteId,
+  ]);
+  if (uso && uso.total > 0) {
+    redirect(`/admin/editorias?erro=${encodeURIComponent(`Essa editoria tem ${uso.total} artigo(s). Mova os artigos ou desative a editoria em vez de excluir.`)}`);
+  }
+  await consulta('delete from editorias where id = $1 and cliente_id = $2', [id, clienteId]);
   revalidarBlog();
   redirect('/admin/editorias?excluida=1');
-}
-
-// ---------- Sessão ----------
-
-export async function sair() {
-  await supabaseServidor().auth.signOut();
-  redirect('/admin/login');
 }

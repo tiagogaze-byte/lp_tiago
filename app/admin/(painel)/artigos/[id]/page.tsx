@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { FormArtigo } from '@/components/admin/FormArtigo';
-import { supabaseServidor } from '@/lib/supabase/server';
-import type { Artigo, Editoria } from '@/lib/tipos';
+import { artigoDoCliente, editoriasDoCliente, titulosPublicados } from '@/lib/admin';
+import { exigirSessao } from '@/lib/auth';
 
 type Props = { params: { id: string }; searchParams: { salvo?: string } };
 
@@ -13,11 +13,12 @@ const AVISOS: Record<string, string> = {
 };
 
 export default async function EditarArtigo({ params, searchParams }: Props) {
-  const supabase = supabaseServidor();
-  const [{ data: artigo }, { data: editorias }, { data: outros }] = await Promise.all([
-    supabase.from('artigos').select('*').eq('id', params.id).maybeSingle(),
-    supabase.from('editorias').select('*').order('ordem'),
-    supabase.from('artigos').select('id, titulo').eq('status', 'publicado').neq('id', params.id).order('publicado_em', { ascending: false }).limit(200),
+  const { clienteId } = await exigirSessao();
+  if (!/^[0-9a-f-]{36}$/i.test(params.id)) notFound();
+  const [artigo, editorias, outros] = await Promise.all([
+    artigoDoCliente(clienteId, params.id),
+    editoriasDoCliente(clienteId),
+    titulosPublicados(clienteId, params.id),
   ]);
   if (!artigo) notFound();
 
@@ -32,10 +33,10 @@ export default async function EditarArtigo({ params, searchParams }: Props) {
         </div>
       </div>
       <FormArtigo
-        key={artigo.atualizado_em}
-        artigo={artigo as Artigo}
-        editorias={(editorias || []) as Editoria[]}
-        outros={outros || []}
+        key={artigo.id}
+        artigo={artigo}
+        editorias={editorias}
+        outros={outros}
         avisoInicial={searchParams.salvo ? AVISOS[searchParams.salvo] : undefined}
       />
     </>

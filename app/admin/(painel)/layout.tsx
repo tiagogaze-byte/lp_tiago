@@ -1,15 +1,9 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { supabaseServidor } from '@/lib/supabase/server';
+import { exigirSessao } from '@/lib/auth';
 import { sair } from '../acoes';
 
 export default async function PainelLayout({ children }: { children: React.ReactNode }) {
-  const supabase = supabaseServidor();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/admin/login');
-  const { data: ehAdmin } = await supabase.rpc('is_admin');
+  const sessao = await exigirSessao();
 
   return (
     <>
@@ -20,10 +14,12 @@ export default async function PainelLayout({ children }: { children: React.React
           </Link>
           <nav>
             <Link href="/admin">Artigos</Link>
+            <Link href="/admin/agenda">Agenda</Link>
             <Link href="/admin/editorias">Editorias</Link>
             <Link href="/" target="_blank">
               Ver site ↗
             </Link>
+            <span style={{ color: 'var(--texto-fraco)' }}>{sessao.nome.split(' ')[0]}</span>
             <form action={sair}>
               <button className="botao-texto" type="submit">
                 Sair
@@ -32,15 +28,7 @@ export default async function PainelLayout({ children }: { children: React.React
           </nav>
         </div>
       </header>
-      <main className="container admin-conteudo">
-        {ehAdmin ? (
-          children
-        ) : (
-          <p className="aviso aviso-erro">
-            O login {user.email} entrou, mas não está na lista de administradores. Adicione esse e-mail na tabela “admins” do Supabase.
-          </p>
-        )}
-      </main>
+      <main className="container admin-conteudo">{children}</main>
     </>
   );
 }
