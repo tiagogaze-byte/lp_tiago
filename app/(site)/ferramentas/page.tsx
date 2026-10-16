@@ -51,7 +51,7 @@ export default function Ferramentas() {
               <div className="grade grade-3">
                 {area.ferramentas.map((f) => (
                   <article key={f.id} id={f.id} className="cartao ferramenta interativo">
-                    <span className="status-ar">Em operação</span>
+                    {f.status === 'testes' ? <span className="status-ar status-testes">Em testes</span> : <span className="status-ar">Em operação</span>}
                     <h3>{f.nome}</h3>
                     <p>{f.faz}</p>
                     <p className="resolve">

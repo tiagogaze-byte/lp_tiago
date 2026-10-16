@@ -97,7 +97,7 @@ export default async function Home() {
           <div className="secao-cabeca">
             <span className="rotulo">Ferramentas</span>
             <h2>Não é teoria. Está funcionando.</h2>
-            <p>{TOTAL_FERRAMENTAS} ferramentas criadas por mim, em operação, organizadas em quatro áreas.</p>
+            <p>{TOTAL_FERRAMENTAS} ferramentas criadas por mim, organizadas em quatro áreas e já trabalhando por clientes.</p>
           </div>
           <div className="grade grade-4">
             {AREAS_FERRAMENTAS.map((area) => (

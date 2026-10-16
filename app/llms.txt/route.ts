@@ -19,7 +19,7 @@ ${SOLUCOES.map((s) => `- [${s.nome}](${SITE.url}/solucoes#${s.id}): ${s.paraQuem
 
 ## Ferramentas
 
-${AREAS_FERRAMENTAS.map((a) => `### ${a.nome}\n${a.ferramentas.map((f) => `- [${f.nome}](${SITE.url}/ferramentas#${f.id}): ${f.faz}`).join('\n')}`).join('\n\n')}
+${AREAS_FERRAMENTAS.map((a) => `### ${a.nome}\n${a.ferramentas.map((f) => `- [${f.nome}](${SITE.url}/ferramentas#${f.id})${f.status === 'testes' ? ' (em testes)' : ''}: ${f.faz}`).join('\n')}`).join('\n\n')}
 
 ## Blog
 

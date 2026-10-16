@@ -70,7 +70,7 @@ export const SOLUCOES: Solucao[] = [
   },
 ];
 
-export type Ferramenta = { id: string; nome: string; faz: string; resolve: string };
+export type Ferramenta = { id: string; nome: string; faz: string; resolve: string; status?: 'operacao' | 'testes' };
 export type AreaFerramentas = { id: string; nome: string; ferramentas: Ferramenta[] };
 
 export const AREAS_FERRAMENTAS: AreaFerramentas[] = [
@@ -81,6 +81,7 @@ export const AREAS_FERRAMENTAS: AreaFerramentas[] = [
       { id: 'secretaria', nome: 'SecretárIA', faz: 'Atende no WhatsApp, qualifica o contato e agenda a conversa com você.', resolve: 'Oportunidade perdida por demora na resposta.' },
       { id: 'uai-hub', nome: 'UAI Hub', faz: 'CRM e central de atendimento no WhatsApp, com IA e equipe humana trabalhando juntas.', resolve: 'Contatos espalhados e atendimento só em horário comercial.' },
       { id: 'central-sms', nome: 'Central de SMS', faz: 'Transforma celulares Android numa central própria de SMS para avisos, lembretes e confirmações.', resolve: 'Custo alto por mensagem nas plataformas de SMS.' },
+      { id: 'roteiro-lab', nome: 'Roteiro Lab', faz: 'Mostra o que está em alta no seu nicho e na sua região e escreve roteiros completos de vídeo curto, com gancho, cenas, legenda e hashtags.', resolve: 'Página em branco, trend que esfria rápido e IA genérica sem cuidado com fatos.', status: 'testes' },
     ],
   },
   {
