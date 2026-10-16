@@ -135,7 +135,7 @@ export default async function ArtigoPagina({ params }: Props) {
                 <div className="avatar">TA</div>
                 <div>
                   <strong>Tiago Azevedo</strong>
-                  <p>Estrategista de comunicação e consultor de IA aplicada. 17 anos entre publicidade, campanhas, setor público e tecnologia.</p>
+                  <p>Estrategista de comunicação e consultor de IA aplicada. Mais de 20 anos entre publicidade, campanhas, setor público e tecnologia.</p>
                 </div>
               </div>
             </div>

@@ -9,7 +9,7 @@ export async function GET() {
 
   const texto = `# ${SITE.nome}
 
-> ${SITE.nome} é estrategista de comunicação e consultor de IA aplicada, de ${SITE.cidade} (MG, Brasil), com 17 anos de experiência em publicidade, campanhas eleitorais, setor público, educação e tecnologia. Ele fecha o gap entre o que pessoas e organizações fazem e o que o mercado percebe, usando estratégia narrativa e inteligência artificial.
+> ${SITE.nome} é estrategista de comunicação e consultor de IA aplicada, de ${SITE.cidade} (MG, Brasil), formado em Publicidade e Propaganda em 2004, com mais de 20 anos de experiência em publicidade, campanhas eleitorais, setor público, educação e tecnologia. Ele fecha o gap entre o que pessoas e organizações fazem e o que o mercado percebe, usando estratégia narrativa e inteligência artificial.
 
 Contato: WhatsApp ${SITE.whatsappExibicao} · ${SITE.email} · ${SITE.url}
 

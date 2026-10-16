@@ -19,7 +19,7 @@ export default async function Home() {
           </h1>
           <div className="linha" />
           <p className="lead">
-            Sou <strong>Tiago Azevedo</strong>. Há 17 anos transformo trabalho invisível em posicionamento, e hoje faço isso com{' '}
+            Sou <strong>Tiago Azevedo</strong>. Há mais de 20 anos transformo trabalho invisível em posicionamento, e hoje faço isso com{' '}
             <strong>inteligência artificial</strong> trabalhando a seu favor.
           </p>
           <div className="acoes">
@@ -120,8 +120,8 @@ export default async function Home() {
           </div>
           <div className="numeros">
             <div>
-              <strong>17 anos</strong>
-              <span>de comunicação e estratégia</span>
+              <strong>20+ anos</strong>
+              <span>de comunicação e estratégia, desde 2004</span>
             </div>
             <div>
               <strong>Desde 2012</strong>

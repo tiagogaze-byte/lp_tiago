@@ -4,7 +4,7 @@ import { AREAS_EXPERIENCIA } from '@/content/site';
 
 export const metadata: Metadata = {
   title: 'Trajetória',
-  description: '17 anos entre publicidade, campanhas eleitorais, setor público, educação e inteligência artificial.',
+  description: 'Mais de 20 anos entre publicidade, campanhas eleitorais, setor público, educação e inteligência artificial.',
   alternates: { canonical: '/trajetoria' },
 };
 
@@ -24,7 +24,7 @@ export default function Trajetoria() {
         <div className="container">
           <div className="texto-longo">
             <p>
-              Comecei na publicidade, escrevendo. De lá para cá, foram <strong>17 anos</strong> traduzindo ideias em mensagens que as pessoas
+              Me formei em Publicidade e Propaganda em 2004 e comecei escrevendo. De lá para cá, foram <strong>mais de 20 anos</strong> traduzindo ideias em mensagens que as pessoas
               entendem e lembram.
             </p>
             <p>
