@@ -1,3 +1,4 @@
+import { identidadeDoSite } from '@/lib/identidade';
 import type { Metadata } from 'next';
 import { SITE } from '@/content/site';
 
@@ -7,7 +8,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/privacidade' },
 };
 
-export default function Privacidade() {
+export default async function Privacidade() {
+  const { contato } = await identidadeDoSite();
   return (
     <section className="secao">
       <div className="container">
@@ -32,7 +34,7 @@ export default function Privacidade() {
           </p>
           <h2 style={{ color: 'var(--texto)', fontSize: '1.4rem' }}>Seus direitos</h2>
           <p>
-            Você pode pedir para ver, corrigir ou apagar seus dados quando quiser, pelo e-mail <strong>{SITE.email}</strong>.
+            Você pode pedir para ver, corrigir ou apagar seus dados quando quiser, pelo e-mail <strong>{contato.email || SITE.email}</strong>.
           </p>
         </div>
       </div>

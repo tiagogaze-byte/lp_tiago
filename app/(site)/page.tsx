@@ -3,10 +3,20 @@ import { CardArtigo, CtaFinal } from '@/components/Blocos';
 import { IconeSeta, IconeWhatsApp } from '@/components/Icones';
 import { AREAS_FERRAMENTAS, SOLUCOES, TOTAL_FERRAMENTAS, linkWhatsApp } from '@/content/site';
 import { listarArtigos } from '@/lib/blog';
+import { BlocosPagina } from '@/components/BlocosPagina';
+import { identidadeDoSite } from '@/lib/identidade';
+import { paginaPublicada } from '@/lib/paginas';
 
 export const revalidate = 60;
 
 export default async function Home() {
+  // Site montado em blocos pelo painel: a página "inicio" vira a home.
+  const pagina = await paginaPublicada('inicio');
+  if (pagina) {
+    const { contato } = await identidadeDoSite();
+    return <BlocosPagina blocos={pagina.blocos} contato={contato} home />;
+  }
+
   const artigos = await listarArtigos({ limite: 3 });
 
   return (

@@ -1,3 +1,5 @@
+import { notFound } from 'next/navigation';
+import { identidadeDoSite } from '@/lib/identidade';
 import type { Metadata } from 'next';
 import { CtaFinal } from '@/components/Blocos';
 import { IconeWhatsApp } from '@/components/Icones';
@@ -9,7 +11,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/solucoes' },
 };
 
-export default function Solucoes() {
+export default async function Solucoes() {
+  if ((await identidadeDoSite()).usaPaginas) notFound();
   return (
     <>
       <section className="hero-pagina">

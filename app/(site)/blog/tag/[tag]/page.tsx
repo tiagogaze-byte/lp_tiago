@@ -1,3 +1,5 @@
+import { notFound } from 'next/navigation';
+import { identidadeDoSite } from '@/lib/identidade';
 import type { Metadata } from 'next';
 import { BlogLista } from '@/components/BlogLista';
 import { listarArtigos, listarEditorias } from '@/lib/blog';
@@ -12,6 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function TagPagina({ params }: Props) {
+  if (!(await identidadeDoSite()).blogAtivo) notFound();
   const tag = decodeURIComponent(params.tag);
   const [artigos, editorias] = await Promise.all([listarArtigos({ tag }), listarEditorias()]);
   return <BlogLista titulo={`Tudo sobre ${tag}`} descricao={`Artigos marcados com “${tag}”.`} artigos={artigos} editorias={editorias} destacar={false} />;

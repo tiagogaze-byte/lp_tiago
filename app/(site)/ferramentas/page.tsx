@@ -1,3 +1,5 @@
+import { notFound } from 'next/navigation';
+import { identidadeDoSite } from '@/lib/identidade';
 import type { Metadata } from 'next';
 import { CtaFinal, JsonLd } from '@/components/Blocos';
 import { IconeWhatsApp } from '@/components/Icones';
@@ -9,7 +11,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/ferramentas' },
 };
 
-export default function Ferramentas() {
+export default async function Ferramentas() {
+  if ((await identidadeDoSite()).usaPaginas) notFound();
   return (
     <>
       <JsonLd

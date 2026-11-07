@@ -1,14 +1,30 @@
+import { notFound } from 'next/navigation';
+import { BlocosPagina } from '@/components/BlocosPagina';
+import { identidadeDoSite } from '@/lib/identidade';
+import { paginaPublicada } from '@/lib/paginas';
 import type { Metadata } from 'next';
 import { IconeWhatsApp } from '@/components/Icones';
 import { SITE, linkWhatsApp } from '@/content/site';
 
-export const metadata: Metadata = {
-  title: 'Contato',
-  description: 'Fale com Tiago Azevedo pelo WhatsApp ou por e-mail. Atendimento em todo o Brasil.',
-  alternates: { canonical: '/contato' },
-};
+export const revalidate = 60;
 
-export default function Contato() {
+export async function generateMetadata(): Promise<Metadata> {
+  const pagina = await paginaPublicada('contato');
+  if (pagina) return { title: pagina.titulo, description: pagina.descricao || undefined, alternates: { canonical: '/contato' } };
+  return {
+    title: 'Contato',
+    description: 'Fale com Tiago Azevedo pelo WhatsApp ou por e-mail. Atendimento em todo o Brasil.',
+    alternates: { canonical: '/contato' },
+  };
+}
+
+export default async function Contato() {
+  const pagina = await paginaPublicada('contato');
+  if (pagina) {
+    const { contato } = await identidadeDoSite();
+    return <BlocosPagina blocos={pagina.blocos} contato={contato} />;
+  }
+  if ((await identidadeDoSite()).usaPaginas) notFound();
   return (
     <>
       <section className="hero-pagina">

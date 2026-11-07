@@ -47,6 +47,20 @@ Formatação do texto: `## Subtítulo`, `**negrito**`, `*itálico*`, `[texto do 
 
 Em **Painel > Editorias** você cria, renomeia, reordena, desativa ou exclui editorias. Desativar esconde do site sem apagar nada. Excluir só funciona quando a editoria não tem artigos.
 
+## Identidade (nome, cores, fonte, contato)
+
+No painel, em **Identidade**: nome do site, assinatura, logo, um dos 9 temas de cor, fonte dos títulos (moderna ou elegante), WhatsApp, telefone, e-mail, cidade, registro profissional (CRP, OAB, CRM...) e se o blog aparece. A prévia muda na hora; o site muda ao salvar.
+
+## Site de outro cliente (gerador)
+
+Cada cliente é um projeto na Vercel apontando para este mesmo repositório, com o próprio banco Neon e uma variável a mais:
+
+- `CLIENTE_SLUG` = um apelido curto e sem espaço (ex.: `helo`). Sem ela, o site é o do Tiago.
+
+Na primeira vez, o cliente abre `/admin/configurar`. O site nasce com três páginas de exemplo (Início, Sobre, Contato), montadas em **blocos** (Topo, Cartões, Texto, Citação, Contato, Chamada), e com o blog desligado. Em **Páginas** ele troca os textos, sobe fotos, cria páginas novas, reordena os blocos e decide o que entra no menu.
+
+As páginas fixas do Tiago (Soluções, Ferramentas, Trajetória) só existem no site dele.
+
 ## Mudar textos fixos do site
 
 Soluções, ferramentas, áreas de experiência, WhatsApp e e-mail ficam em `content/site.ts`. Edite, faça commit e a Vercel publica sozinha.

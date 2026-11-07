@@ -12,8 +12,8 @@ export const SITE = {
   cidade: 'Belo Horizonte',
 };
 
-export function linkWhatsApp(mensagem = 'Olá, Tiago! Vim pelo site e quero conversar.') {
-  return `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(mensagem)}`;
+export function linkWhatsApp(mensagem = 'Olá, Tiago! Vim pelo site e quero conversar.', numero: string = SITE.whatsapp) {
+  return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
 }
 
 export const MENU = [

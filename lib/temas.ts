@@ -10,6 +10,7 @@ export type Tema = {
   destaque: string; // botões, links, detalhes
   destaqueEscuro: string; // fim do degradê dos botões
   textoNoDestaque: string; // texto escrito em cima do destaque
+  titulo?: string; // cor dos títulos, quando diferente do texto
 };
 
 export const TEMAS: Tema[] = [
@@ -20,6 +21,7 @@ export const TEMAS: Tema[] = [
   { id: 'noite-violeta', nome: 'Noite e violeta', modo: 'escuro', fundo: '#100e17', fundoProfundo: '#0a0910', destaque: '#9b6cff', destaqueEscuro: '#6d33e0', textoNoDestaque: '#ffffff' },
   { id: 'areia-laranja', nome: 'Areia e laranja', modo: 'claro', fundo: '#faf8f5', fundoProfundo: '#f1ede7', destaque: '#df4515', destaqueEscuro: '#b0330c', textoNoDestaque: '#ffffff' },
   { id: 'claro-verde', nome: 'Claro e verde', modo: 'claro', fundo: '#f6f9f7', fundoProfundo: '#eaf1ec', destaque: '#16803d', destaqueEscuro: '#0f5f2d', textoNoDestaque: '#ffffff' },
+  { id: 'lavanda-ameixa', nome: 'Lavanda e ameixa', modo: 'claro', fundo: '#f8f5fa', fundoProfundo: '#efe7f4', destaque: '#7a4da0', destaqueEscuro: '#56306f', textoNoDestaque: '#ffffff', titulo: '#56306f' },
   { id: 'claro-azul', nome: 'Claro e azul', modo: 'claro', fundo: '#f7f9fc', fundoProfundo: '#e9eff7', destaque: '#1d4ed8', destaqueEscuro: '#1e3a8a', textoNoDestaque: '#ffffff' },
 ];
 
@@ -56,10 +58,24 @@ export function variaveisDoTema(tema: Tema): Record<string, string> {
     '--sombra-laranja': `rgba(${rgb}, ${claro ? 0.22 : 0.25})`,
     '--texto-no-destaque': tema.textoNoDestaque,
     'color-scheme': claro ? 'light' : 'dark',
+    ...(tema.titulo ? { '--titulo': tema.titulo } : {}),
   };
 }
 
-export function cssDoTema(tema: Tema) {
-  const linhas = Object.entries(variaveisDoTema(tema)).map(([k, v]) => `${k}:${v}`);
+// Pares de fonte. Só a fonte dos títulos muda; o texto corrido continua o mesmo.
+export const FONTES = [
+  { id: 'moderna', nome: 'Moderna', descricao: 'Títulos sem serifa, diretos', titulo: "'Outfit', 'Helvetica Neue', Arial, sans-serif" },
+  { id: 'elegante', nome: 'Elegante', descricao: 'Títulos com serifa, acolhedores', titulo: "'Lora', Georgia, 'Times New Roman', serif" },
+] as const;
+
+export type IdFonte = (typeof FONTES)[number]['id'];
+
+export function fontePorId(id?: string | null) {
+  return FONTES.find((f) => f.id === id) || FONTES[0];
+}
+
+export function cssDoTema(tema: Tema, fonte?: string | null) {
+  const variaveis = { ...variaveisDoTema(tema), '--fonte-titulo': fontePorId(fonte).titulo };
+  const linhas = Object.entries(variaveis).map(([k, v]) => `${k}:${v}`);
   return `:root{${linhas.join(';')}}`;
 }

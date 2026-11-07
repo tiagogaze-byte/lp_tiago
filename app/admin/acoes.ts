@@ -8,7 +8,9 @@ import { CLIENTE_PADRAO, consulta, umaLinha } from '@/lib/db';
 import { ESTRUTURA_DO_BANCO } from '@/lib/schema';
 import type { ItemFaq, StatusArtigo } from '@/lib/tipos';
 import { gerarSlug, listaDeTexto } from '@/lib/util';
-import { temaPorId } from '@/lib/temas';
+import { fontePorId, temaPorId } from '@/lib/temas';
+import { paginasIniciais } from '@/lib/modelos';
+import type { Bloco, ConfigSite } from '@/lib/tipos';
 
 export type Resultado = { ok: boolean; mensagem: string; id?: string };
 
@@ -26,7 +28,10 @@ function revalidarBlog(slug?: string, editoriaSlug?: string) {
 
 export async function existeUsuario() {
   try {
-    const linha = await umaLinha<{ total: number }>('select count(*)::int as total from usuarios');
+    const linha = await umaLinha<{ total: number }>(
+      'select count(*)::int as total from usuarios u join clientes c on c.id = u.cliente_id where c.slug = $1',
+      [CLIENTE_PADRAO],
+    );
     return (linha?.total || 0) > 0;
   } catch {
     return false; // tabelas ainda não existem
@@ -47,16 +52,31 @@ export async function configurarPortal(_anterior: Resultado | null, form: FormDa
   try {
     for (const comando of ESTRUTURA_DO_BANCO) await consulta(comando);
 
+    const ehTiago = CLIENTE_PADRAO === 'tiagogaze';
     const cliente = await umaLinha<{ id: string }>(
-      `insert into clientes (slug, nome, dominio) values ($1, $2, $3)
+      `insert into clientes (slug, nome, dominio, config) values ($1, $2, $3, $4::jsonb)
        on conflict (slug) do update set nome = excluded.nome returning id`,
-      [CLIENTE_PADRAO, 'Tiago Azevedo', 'tiagogaze.com.br'],
+      ehTiago
+        ? [CLIENTE_PADRAO, 'Tiago Azevedo', 'tiagogaze.com.br', '{}']
+        : [CLIENTE_PADRAO, nome, null, JSON.stringify({ email, blog: false })],
     );
     const clienteId = cliente!.id;
 
-    // Editorias iniciais
+    // Site novo: começa com páginas em blocos (Início, Sobre, Contato) e blog desligado.
+    if (!ehTiago) {
+      for (const p of paginasIniciais(nome)) {
+        await consulta(
+          `insert into paginas (cliente_id, titulo, slug, ordem, blocos) values ($1, $2, $3, $4, $5::jsonb) on conflict (cliente_id, slug) do nothing`,
+          [clienteId, p.titulo, p.slug, p.ordem, JSON.stringify(p.blocos)],
+        );
+      }
+    }
+
+    // Editorias iniciais (só o site do Tiago já nasce com blog e artigos)
+    const editoriasIniciais = ehTiago ? EDITORIAS_EXEMPLO : [];
+    const artigosIniciais = ehTiago ? ARTIGOS_EXEMPLO : [];
     const mapaEditorias: Record<string, string> = {};
-    for (const e of EDITORIAS_EXEMPLO) {
+    for (const e of editoriasIniciais) {
       const linha = await umaLinha<{ id: string }>(
         `insert into editorias (cliente_id, nome, slug, descricao, ordem) values ($1, $2, $3, $4, $5)
          on conflict (cliente_id, slug) do update set nome = excluded.nome returning id`,
@@ -66,7 +86,7 @@ export async function configurarPortal(_anterior: Resultado | null, form: FormDa
     }
 
     // Artigos que já estavam no site
-    for (const a of ARTIGOS_EXEMPLO) {
+    for (const a of artigosIniciais) {
       await consulta(
         `insert into artigos (cliente_id, titulo, slug, resumo, corpo, editoria_id, tags, palavra_chave, palavras_secundarias,
            capa_url, capa_alt, faq, status, publicado_em)
@@ -89,6 +109,7 @@ export async function configurarPortal(_anterior: Resultado | null, form: FormDa
   }
 
   revalidarBlog();
+  revalidatePath('/', 'layout');
   redirect('/admin?bemvindo=1');
 }
 
@@ -242,27 +263,132 @@ export async function excluirEditoria(form: FormData) {
   redirect('/admin/editorias?excluida=1');
 }
 
-// ---------- Aparência (identidade e tema) ----------
+// ---------- Identidade (nome, cores, fonte, contato) ----------
 
-export async function salvarAparencia(_anterior: Resultado | null, form: FormData): Promise<Resultado> {
+export async function salvarIdentidade(_anterior: Resultado | null, form: FormData): Promise<Resultado> {
   const { clienteId, perfil } = await exigirSessao();
-  if (perfil === 'editor') return { ok: false, mensagem: 'Só o dono ou um administrador pode mudar a aparência do site.' };
+  if (perfil === 'editor') return { ok: false, mensagem: 'Só o dono ou um administrador pode mudar a identidade do site.' };
 
-  const nome = String(form.get('nome') || '').trim();
-  const slogan = String(form.get('slogan') || '').trim();
-  const tema = temaPorId(String(form.get('tema') || '')).id;
-  const logoUrl = String(form.get('logo_url') || '').trim() || null;
+  const texto = (campo: string) => String(form.get(campo) || '').trim();
+  const nome = texto('nome');
+  const slogan = texto('slogan');
+  const tema = temaPorId(texto('tema')).id;
+  const fonte = fontePorId(texto('fonte')).id;
+  const logoUrl = texto('logo_url') || null;
   if (!nome) return { ok: false, mensagem: 'O site precisa de um nome.' };
   if (nome.length > 40) return { ok: false, mensagem: 'Use um nome com até 40 caracteres.' };
   if (slogan.length > 80) return { ok: false, mensagem: 'Use uma assinatura com até 80 caracteres.' };
 
+  let whatsapp = texto('whatsapp').replace(/\D/g, '');
+  if (whatsapp && whatsapp.length <= 11) whatsapp = `55${whatsapp}`; // DDD + número: põe o código do Brasil
+  if (whatsapp && (whatsapp.length < 12 || whatsapp.length > 13)) return { ok: false, mensagem: 'Confira o WhatsApp: use DDD e número, como (31) 99999-0000.' };
+  const email = texto('email').toLowerCase();
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, mensagem: 'Confira o e-mail de contato.' };
+
+  const config: ConfigSite = {
+    whatsapp,
+    telefone: texto('telefone'),
+    email,
+    cidade: texto('cidade'),
+    registro: texto('registro'),
+    blog: form.get('blog') === 'on',
+  };
+
   try {
     // Garante as colunas novas em bancos criados antes desta versão. Não apaga nada.
     for (const comando of ESTRUTURA_DO_BANCO) await consulta(comando);
-    await consulta('update clientes set nome=$1, slogan=$2, tema=$3, logo_url=$4 where id=$5', [nome, slogan, tema, logoUrl, clienteId]);
+    // Mescla com o que já existe (preserva preferências que não estão nesta tela).
+    await consulta('update clientes set nome=$1, slogan=$2, tema=$3, logo_url=$4, fonte=$5, config = config || $6::jsonb where id=$7', [
+      nome, slogan, tema, logoUrl, fonte, JSON.stringify(config), clienteId,
+    ]);
   } catch (erro) {
     return { ok: false, mensagem: `Não foi possível salvar: ${(erro as Error).message}` };
   }
   revalidatePath('/', 'layout');
-  return { ok: true, mensagem: 'Aparência salva. O site já está com a cara nova.' };
+  return { ok: true, mensagem: 'Pronto. O site já está com a cara nova.' };
+}
+
+// ---------- Páginas em blocos ----------
+
+const TIPOS_DE_BLOCO = ['topo', 'cartoes', 'texto', 'citacao', 'contato', 'chamada'];
+const RESERVADOS = ['admin', 'api', 'blog', 'imagens', 'feed.xml', 'sitemap.xml', 'robots.txt', 'llms.txt', 'privacidade', 'icon.svg', 'favicon.ico', 'apple-icon.png'];
+
+export async function criarPagina(form: FormData) {
+  const { clienteId } = await exigirSessao();
+  const titulo = String(form.get('titulo') || '').trim() || 'Nova página';
+  let slug = gerarSlug(titulo) || 'pagina';
+  if (RESERVADOS.includes(slug)) slug = `${slug}-1`;
+  const ordem = await umaLinha<{ proxima: number }>('select coalesce(max(ordem), 0) + 1 as proxima from paginas where cliente_id = $1', [clienteId]);
+  const existe = await umaLinha<{ id: string }>('select id from paginas where cliente_id = $1 and slug = $2', [clienteId, slug]);
+  if (existe) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
+  const blocos = [{ id: crypto.randomUUID(), tipo: 'topo', rotulo: '', titulo, destaque: '', texto: '', imagem_url: '', imagem_alt: '', botao_texto: '', botao_link: '', botao2_texto: '', botao2_link: '' }];
+  const nova = await umaLinha<{ id: string }>(
+    'insert into paginas (cliente_id, titulo, slug, ordem, blocos, publicada) values ($1, $2, $3, $4, $5::jsonb, false) returning id',
+    [clienteId, titulo, slug, ordem?.proxima || 1, JSON.stringify(blocos)],
+  );
+  redirect(`/admin/paginas/${nova!.id}?nova=1`);
+}
+
+function limparBlocos(bruto: string): Bloco[] {
+  const lista = JSON.parse(bruto || '[]');
+  if (!Array.isArray(lista)) throw new Error('blocos inválidos');
+  return lista
+    .filter((b) => b && TIPOS_DE_BLOCO.includes(b.tipo))
+    .map((b) => {
+      const limpo: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(b)) {
+        if (typeof v === 'string') limpo[k] = v.slice(0, 20000);
+        else if (typeof v === 'boolean') limpo[k] = v;
+        else if (k === 'itens' && Array.isArray(v))
+          limpo[k] = v.slice(0, 12).map((i) => ({ titulo: String(i?.titulo || '').slice(0, 200), texto: String(i?.texto || '').slice(0, 2000) }));
+      }
+      if (!limpo.id) limpo.id = crypto.randomUUID();
+      return limpo as Bloco;
+    });
+}
+
+export async function salvarPagina(_anterior: Resultado | null, form: FormData): Promise<Resultado> {
+  const { clienteId } = await exigirSessao();
+  const id = String(form.get('id') || '');
+  const titulo = String(form.get('titulo') || '').trim();
+  if (!titulo) return { ok: false, mensagem: 'A página precisa de um nome (ele aparece no menu).' };
+  const atual = await umaLinha<{ slug: string }>('select slug from paginas where id = $1 and cliente_id = $2', [id, clienteId]);
+  if (!atual) return { ok: false, mensagem: 'Página não encontrada.' };
+
+  // A home não muda de endereço.
+  const slug = atual.slug === 'inicio' ? 'inicio' : gerarSlug(String(form.get('slug') || '') || titulo);
+  if (!slug) return { ok: false, mensagem: 'Confira o endereço da página.' };
+  if (RESERVADOS.includes(slug)) return { ok: false, mensagem: `O endereço /${slug} é reservado pelo sistema. Escolha outro.` };
+
+  let blocos: Bloco[];
+  try {
+    blocos = limparBlocos(String(form.get('blocos') || '[]'));
+  } catch {
+    return { ok: false, mensagem: 'Não foi possível ler os blocos da página. Recarregue e tente de novo.' };
+  }
+
+  try {
+    await consulta(
+      `update paginas set titulo=$1, slug=$2, descricao=$3, no_menu=$4, ordem=$5, publicada=$6, blocos=$7::jsonb, atualizado_em=now()
+       where id=$8 and cliente_id=$9`,
+      [
+        titulo, slug, String(form.get('descricao') || '').trim().slice(0, 300), form.get('no_menu') === 'on', Number(form.get('ordem') || 0),
+        atual.slug === 'inicio' ? true : form.get('publicada') === 'on', JSON.stringify(blocos), id, clienteId,
+      ],
+    );
+  } catch (erro) {
+    const msg = String((erro as Error).message).includes('duplicate') ? 'Já existe outra página com esse endereço.' : (erro as Error).message;
+    return { ok: false, mensagem: `Não foi possível salvar: ${msg}` };
+  }
+  revalidatePath('/', 'layout');
+  const publicada = atual.slug === 'inicio' || form.get('publicada') === 'on';
+  return { ok: true, mensagem: publicada ? 'Página salva. Já está no ar.' : 'Página salva como rascunho (fora do ar).' };
+}
+
+export async function excluirPagina(form: FormData) {
+  const { clienteId } = await exigirSessao();
+  const id = String(form.get('id'));
+  await consulta("delete from paginas where id = $1 and cliente_id = $2 and slug <> 'inicio'", [id, clienteId]);
+  revalidatePath('/', 'layout');
+  redirect('/admin/paginas?excluida=1');
 }

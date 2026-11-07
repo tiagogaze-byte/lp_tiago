@@ -2,30 +2,44 @@
 
 import { useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
-import { salvarAparencia, type Resultado } from '@/app/admin/acoes';
-import { variaveisDoTema, type Tema } from '@/lib/temas';
+import { salvarIdentidade, type Resultado } from '@/app/admin/acoes';
+import { FONTES, variaveisDoTema, type Tema } from '@/lib/temas';
 
-type Inicial = { nome: string; slogan: string; logoUrl: string | null; tema: string };
+type Inicial = {
+  nome: string;
+  slogan: string;
+  logoUrl: string | null;
+  tema: string;
+  fonte: string;
+  whatsapp: string;
+  telefone: string;
+  email: string;
+  cidade: string;
+  registro: string;
+  blog: boolean;
+};
 
 function Enviar() {
   const { pending } = useFormStatus();
   return (
     <button className="botao botao-primario" type="submit" disabled={pending}>
-      {pending ? 'Salvando...' : 'Salvar aparência'}
+      {pending ? 'Salvando...' : 'Salvar'}
     </button>
   );
 }
 
-export function FormAparencia({ temas, inicial }: { temas: Tema[]; inicial: Inicial }) {
-  const [estado, acao] = useFormState<Resultado | null, FormData>(salvarAparencia, null);
+export function FormIdentidade({ temas, inicial }: { temas: Tema[]; inicial: Inicial }) {
+  const [estado, acao] = useFormState<Resultado | null, FormData>(salvarIdentidade, null);
   const [nome, setNome] = useState(inicial.nome);
   const [slogan, setSlogan] = useState(inicial.slogan);
   const [logoUrl, setLogoUrl] = useState(inicial.logoUrl || '');
   const [temaId, setTemaId] = useState(inicial.tema);
+  const [fonteId, setFonteId] = useState(inicial.fonte);
   const [enviando, setEnviando] = useState(false);
   const [erroLogo, setErroLogo] = useState('');
 
   const tema = temas.find((t) => t.id === temaId) || temas[0];
+  const fonte = FONTES.find((f) => f.id === fonteId) || FONTES[0];
 
   async function enviarLogo(arquivo: File) {
     setErroLogo('');
@@ -48,6 +62,7 @@ export function FormAparencia({ temas, inicial }: { temas: Tema[]; inicial: Inic
   return (
     <form action={acao} className="aparencia">
       <input type="hidden" name="tema" value={temaId} />
+      <input type="hidden" name="fonte" value={fonteId} />
       <input type="hidden" name="logo_url" value={logoUrl} />
 
       <div className="aparencia-campos">
@@ -112,6 +127,53 @@ export function FormAparencia({ temas, inicial }: { temas: Tema[]; inicial: Inic
           </div>
         </section>
 
+        <section className="painel" style={{ gap: 14 }}>
+          <h2 className="aparencia-subtitulo">Fonte dos títulos</h2>
+          <div className="temas" role="radiogroup" aria-label="Fonte dos títulos">
+            {FONTES.map((f) => (
+              <button key={f.id} type="button" role="radio" aria-checked={f.id === fonteId} className="tema-opcao" onClick={() => setFonteId(f.id)}>
+                <span className="tema-amostra fonte-amostra" style={{ fontFamily: f.titulo }}>
+                  Aa
+                </span>
+                <span className="tema-nome">
+                  {f.nome}
+                  <small>{f.descricao}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="painel" style={{ gap: 14 }}>
+          <h2 className="aparencia-subtitulo">Contato</h2>
+          <p className="ajuda">Aparece no cabeçalho, no rodapé, nos botões de WhatsApp e no bloco de contato das páginas. Campo vazio não aparece no site.</p>
+          <div className="grade grade-2" style={{ gap: 14 }}>
+            <div className="campo">
+              <label htmlFor="whatsapp">WhatsApp <small>com DDD</small></label>
+              <input id="whatsapp" name="whatsapp" type="tel" inputMode="tel" defaultValue={inicial.whatsapp} placeholder="(31) 99999-0000" />
+            </div>
+            <div className="campo">
+              <label htmlFor="telefone">Telefone fixo <small>opcional</small></label>
+              <input id="telefone" name="telefone" type="tel" defaultValue={inicial.telefone} placeholder="(31) 3333-0000" />
+            </div>
+            <div className="campo">
+              <label htmlFor="email">E-mail de contato</label>
+              <input id="email" name="email" type="email" defaultValue={inicial.email} />
+            </div>
+            <div className="campo">
+              <label htmlFor="cidade">Cidade <small>opcional</small></label>
+              <input id="cidade" name="cidade" type="text" defaultValue={inicial.cidade} placeholder="Belo Horizonte (MG)" />
+            </div>
+          </div>
+          <div className="campo">
+            <label htmlFor="registro">Registro profissional <small>opcional · ex.: CRP 04/44138, OAB/MG 123.456, CRM 12345</small></label>
+            <input id="registro" name="registro" type="text" defaultValue={inicial.registro} />
+          </div>
+          <label className="caixa">
+            <input type="checkbox" name="blog" defaultChecked={inicial.blog} /> Mostrar o blog no site
+          </label>
+        </section>
+
         <div className="linha-acoes" style={{ justifyContent: 'flex-start' }}>
           <Enviar />
           {estado && <span className={`aviso ${estado.ok ? 'aviso-ok' : 'aviso-erro'}`}>{estado.mensagem}</span>}
@@ -120,7 +182,7 @@ export function FormAparencia({ temas, inicial }: { temas: Tema[]; inicial: Inic
 
       <aside className="aparencia-previa" aria-label="Prévia do site">
         <small className="aparencia-rotulo">Prévia</small>
-        <div className="previa-site" style={variaveisDoTema(tema) as React.CSSProperties}>
+        <div className="previa-site" style={{ ...variaveisDoTema(tema), '--fonte-titulo': fonte.titulo } as React.CSSProperties}>
           <div className="previa-topo">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

@@ -1,3 +1,4 @@
+import { identidadeDoSite } from '@/lib/identidade';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -33,6 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ArtigoPagina({ params }: Props) {
+  if (!(await identidadeDoSite()).blogAtivo) notFound();
   const artigo = await buscarArtigo(params.slug);
   if (!artigo) notFound();
 

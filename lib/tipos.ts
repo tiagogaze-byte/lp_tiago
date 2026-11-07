@@ -32,3 +32,38 @@ export type Artigo = {
 };
 
 export type ArtigoComEditoria = Artigo & { editoria: Editoria | null };
+
+// ---------- Páginas em blocos ----------
+
+export type ItemCartao = { titulo: string; texto: string };
+
+export type Bloco =
+  | { id: string; tipo: 'topo'; rotulo: string; titulo: string; destaque: string; texto: string; imagem_url: string; imagem_alt: string; botao_texto: string; botao_link: string; botao2_texto: string; botao2_link: string }
+  | { id: string; tipo: 'cartoes'; rotulo: string; titulo: string; texto: string; numerados: boolean; itens: ItemCartao[] }
+  | { id: string; tipo: 'texto'; rotulo: string; titulo: string; corpo: string; imagem_url: string; imagem_alt: string }
+  | { id: string; tipo: 'citacao'; texto: string; autor: string }
+  | { id: string; tipo: 'contato'; rotulo: string; titulo: string; texto: string }
+  | { id: string; tipo: 'chamada'; titulo: string; texto: string; botao_texto: string; botao_link: string };
+
+export type TipoBloco = Bloco['tipo'];
+
+export type Pagina = {
+  id: string;
+  titulo: string;
+  slug: string;
+  descricao: string;
+  no_menu: boolean;
+  ordem: number;
+  publicada: boolean;
+  blocos: Bloco[];
+};
+
+export type ConfigSite = {
+  whatsapp?: string; // só números, com DDI: 5531999999999
+  telefone?: string;
+  email?: string;
+  cidade?: string;
+  registro?: string; // ex.: CRP 04/44138, OAB/MG 123
+  blog?: boolean;
+  mensagem_whatsapp?: string;
+};

@@ -1,3 +1,4 @@
+import { identidadeDoSite } from '@/lib/identidade';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { BlogLista } from '@/components/BlogLista';
@@ -18,6 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function EditoriaPagina({ params }: Props) {
+  if (!(await identidadeDoSite()).blogAtivo) notFound();
   const editorias = await listarEditorias();
   const editoria = editorias.find((e) => e.slug === params.slug);
   if (!editoria) notFound();

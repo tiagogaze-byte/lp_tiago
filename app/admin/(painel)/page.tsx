@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { artigosDoCliente, contarPorStatus, editoriasDoCliente } from '@/lib/admin';
 import { exigirSessao } from '@/lib/auth';
 import { formatarData } from '@/lib/util';
+import { redirect } from 'next/navigation';
+import { identidadeDoSite } from '@/lib/identidade';
 
 type Props = { searchParams: { status?: string; editoria?: string; q?: string; excluido?: string; bemvindo?: string } };
 
@@ -9,6 +11,8 @@ const ROTULO_STATUS = { publicado: 'Publicado', agendado: 'Agendado', rascunho: 
 
 export default async function PainelArtigos({ searchParams }: Props) {
   const { clienteId } = await exigirSessao();
+  // Site sem blog: o painel abre direto nas páginas.
+  if (!(await identidadeDoSite()).blogAtivo) redirect(searchParams.bemvindo ? '/admin/paginas?bemvindo=1' : '/admin/paginas');
   const [lista, editorias, contagem] = await Promise.all([
     artigosDoCliente(clienteId, searchParams),
     editoriasDoCliente(clienteId),

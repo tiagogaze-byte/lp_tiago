@@ -3,7 +3,7 @@ import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { umaLinha } from './db';
+import { CLIENTE_PADRAO, umaLinha } from './db';
 
 const COOKIE = 'sessao_painel';
 const DURACAO_DIAS = 30;
@@ -65,8 +65,9 @@ export async function sessaoAtual(): Promise<Sessao | null> {
   const usuarioId = lerCookie();
   if (!usuarioId) return null;
   const linha = await umaLinha<{ id: string; cliente_id: string; nome: string; email: string; perfil: Sessao['perfil'] }>(
-    'select u.id, u.cliente_id, u.nome, u.email, u.perfil from usuarios u join clientes c on c.id = u.cliente_id where u.id = $1 and c.situacao = $2',
-    [usuarioId, 'ativo'],
+    // O usuário só entra no painel do próprio site.
+    'select u.id, u.cliente_id, u.nome, u.email, u.perfil from usuarios u join clientes c on c.id = u.cliente_id where u.id = $1 and c.situacao = $2 and c.slug = $3',
+    [usuarioId, 'ativo', CLIENTE_PADRAO],
   );
   if (!linha) return null;
   return { usuarioId: linha.id, clienteId: linha.cliente_id, nome: linha.nome, email: linha.email, perfil: linha.perfil };

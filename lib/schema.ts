@@ -60,4 +60,21 @@ export const ESTRUTURA_DO_BANCO: string[] = [
   // Identidade visual do cliente (tema já existia): nome de exibição, frase de assinatura e logo.
   `alter table clientes add column if not exists slogan text not null default ''`,
   `alter table clientes add column if not exists logo_url text`,
+  `alter table clientes add column if not exists fonte text not null default 'moderna'`,
+  // Contato, blog ligado/desligado e outras preferências do site.
+  `alter table clientes add column if not exists config jsonb not null default '{}'::jsonb`,
+  // Páginas montadas em blocos pelo painel. A página "inicio" vira a home do site.
+  `create table if not exists paginas (
+  id uuid primary key default gen_random_uuid(),
+  cliente_id uuid not null references clientes(id) on delete cascade,
+  titulo text not null,
+  slug text not null,
+  descricao text not null default '',
+  no_menu boolean not null default true,
+  ordem int not null default 0,
+  publicada boolean not null default true,
+  blocos jsonb not null default '[]'::jsonb,
+  atualizado_em timestamptz not null default now(),
+  unique (cliente_id, slug)
+)`,
 ];

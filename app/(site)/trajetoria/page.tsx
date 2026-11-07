@@ -1,3 +1,5 @@
+import { notFound } from 'next/navigation';
+import { identidadeDoSite } from '@/lib/identidade';
 import type { Metadata } from 'next';
 import { CtaFinal } from '@/components/Blocos';
 import { AREAS_EXPERIENCIA } from '@/content/site';
@@ -8,7 +10,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/trajetoria' },
 };
 
-export default function Trajetoria() {
+export default async function Trajetoria() {
+  if ((await identidadeDoSite()).usaPaginas) notFound();
   return (
     <>
       <section className="hero-pagina">

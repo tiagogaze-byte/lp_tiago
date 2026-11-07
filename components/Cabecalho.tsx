@@ -2,40 +2,45 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MENU, linkWhatsApp } from '@/content/site';
 import { IconeWhatsApp } from './Icones';
 import { Marca, type DadosMarca } from './Marca';
 
-export function Cabecalho({ marca }: { marca: DadosMarca }) {
+type ItemMenu = { href: string; rotulo: string };
+
+export function Cabecalho({ marca, menu, whatsapp }: { marca: DadosMarca; menu: ItemMenu[]; whatsapp: string | null }) {
   const caminho = usePathname();
-  const ativo = (href: string) => caminho === href || caminho.startsWith(href + '/');
+  const ativo = (href: string) => (href === '/' ? caminho === '/' : caminho === href || caminho.startsWith(href + '/'));
 
   return (
     <header className="cabecalho">
       <div className="container">
         <Marca marca={marca} />
         <nav className="menu" aria-label="Principal">
-          {MENU.map((item) => (
+          {menu.map((item) => (
             <Link key={item.href} href={item.href} aria-current={ativo(item.href) ? 'page' : undefined}>
               {item.rotulo}
             </Link>
           ))}
-          <a className="botao botao-primario botao-pequeno" href={linkWhatsApp()} target="_blank" rel="noopener">
-            <IconeWhatsApp />
-            Conversar
-          </a>
+          {whatsapp && (
+            <a className="botao botao-primario botao-pequeno" href={whatsapp} target="_blank" rel="noopener">
+              <IconeWhatsApp />
+              Conversar
+            </a>
+          )}
         </nav>
         <details className="menu-celular">
           <summary>Menu</summary>
           <nav aria-label="Principal no celular">
-            {MENU.map((item) => (
+            {menu.map((item) => (
               <Link key={item.href} href={item.href}>
                 {item.rotulo}
               </Link>
             ))}
-            <a href={linkWhatsApp()} target="_blank" rel="noopener">
-              Falar no WhatsApp
-            </a>
+            {whatsapp && (
+              <a href={whatsapp} target="_blank" rel="noopener">
+                Falar no WhatsApp
+              </a>
+            )}
           </nav>
         </details>
       </div>

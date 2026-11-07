@@ -1,6 +1,6 @@
 import 'server-only';
 import { consulta, umaLinha } from './db';
-import type { Artigo, Editoria } from './tipos';
+import type { Artigo, Editoria, Pagina } from './tipos';
 
 // Leituras do painel. Sempre filtradas pelo cliente da sessão.
 
@@ -87,4 +87,17 @@ export async function rascunhosSemData(clienteId: string) {
      order by a.atualizado_em desc limit 50`,
     [clienteId],
   );
+}
+
+export async function paginasDoCliente(clienteId: string) {
+  return consulta<Pagina & { atualizado_em: string }>(
+    `select id, titulo, slug, descricao, no_menu, ordem, publicada, blocos,
+       to_char(atualizado_em at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as atualizado_em
+     from paginas where cliente_id = $1 order by ordem, titulo`,
+    [clienteId],
+  );
+}
+
+export async function paginaDoCliente(clienteId: string, id: string) {
+  return umaLinha<Pagina>('select id, titulo, slug, descricao, no_menu, ordem, publicada, blocos from paginas where cliente_id = $1 and id = $2', [clienteId, id]);
 }

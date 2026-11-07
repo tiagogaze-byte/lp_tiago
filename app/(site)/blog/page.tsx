@@ -1,3 +1,5 @@
+import { notFound } from 'next/navigation';
+import { identidadeDoSite } from '@/lib/identidade';
 import type { Metadata } from 'next';
 import { BlogLista } from '@/components/BlogLista';
 import { listarArtigos, listarEditorias } from '@/lib/blog';
@@ -11,6 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Blog() {
+  if (!(await identidadeDoSite()).blogAtivo) notFound();
   const [artigos, editorias] = await Promise.all([listarArtigos(), listarEditorias()]);
   return (
     <BlogLista
