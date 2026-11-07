@@ -2,8 +2,11 @@ import { Cabecalho } from '@/components/Cabecalho';
 import { Rodape } from '@/components/Rodape';
 import { JsonLd } from '@/components/Blocos';
 import { SITE } from '@/content/site';
+import { identidadeDoSite } from '@/lib/identidade';
 
-export default function SiteLayout({ children }: { children: React.ReactNode }) {
+export default async function SiteLayout({ children }: { children: React.ReactNode }) {
+  const identidade = await identidadeDoSite();
+  const marca = { nome: identidade.nome, slogan: identidade.slogan, logoUrl: identidade.logoUrl };
   return (
     <>
       <JsonLd
@@ -20,9 +23,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           knowsAbout: ['Comunicação política', 'Inteligência artificial aplicada', 'Dados eleitorais', 'Automação de atendimento', 'Estratégia de posicionamento'],
         }}
       />
-      <Cabecalho />
+      <Cabecalho marca={marca} />
       <main>{children}</main>
-      <Rodape />
+      <Rodape marca={marca} />
     </>
   );
 }

@@ -16,6 +16,7 @@ export default async function PainelLayout({ children }: { children: React.React
             <Link href="/admin">Artigos</Link>
             <Link href="/admin/agenda">Agenda</Link>
             <Link href="/admin/editorias">Editorias</Link>
+            <Link href="/admin/aparencia">Aparência</Link>
             <Link href="/" target="_blank">
               Ver site ↗
             </Link>

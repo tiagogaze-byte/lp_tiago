@@ -57,4 +57,7 @@ export const ESTRUTURA_DO_BANCO: string[] = [
   `create index if not exists artigos_editoria_idx on artigos (editoria_id)`,
   `create index if not exists artigos_tags_idx on artigos using gin (tags)`,
   `create index if not exists editorias_cliente_idx on editorias (cliente_id, ordem)`,
+  // Identidade visual do cliente (tema já existia): nome de exibição, frase de assinatura e logo.
+  `alter table clientes add column if not exists slogan text not null default ''`,
+  `alter table clientes add column if not exists logo_url text`,
 ];

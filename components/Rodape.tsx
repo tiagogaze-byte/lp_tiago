@@ -1,18 +1,17 @@
 import Link from 'next/link';
 import { MENU, SITE, linkWhatsApp } from '@/content/site';
 import { IconeWhatsApp } from './Icones';
+import { Marca, type DadosMarca } from './Marca';
 
-export function Rodape() {
+export function Rodape({ marca }: { marca: DadosMarca }) {
   return (
     <>
       <footer className="rodape">
         <div className="container">
           <div className="rodape-grade">
             <div style={{ display: 'grid', gap: 10, alignContent: 'start' }}>
-              <Link href="/" className="marca" style={{ color: 'var(--texto)' }}>
-                Tiago Azevedo<span style={{ color: 'var(--laranja)' }}>.</span>
-              </Link>
-              <p>{SITE.assinatura}</p>
+              <Marca marca={marca} estilo={{ color: 'var(--texto)' }} />
+              <p>{marca.slogan}</p>
               <p>{SITE.cidade}, atendimento em todo o Brasil.</p>
             </div>
             <div>
@@ -43,7 +42,7 @@ export function Rodape() {
             </div>
           </div>
           <div className="rodape-base">
-            <span>© {new Date().getFullYear()} Tiago Azevedo</span>
+            <span>© {new Date().getFullYear()} {marca.nome}</span>
             <span>Estratégia Narrativa · IA Aplicada · Resultados reais</span>
           </div>
         </div>

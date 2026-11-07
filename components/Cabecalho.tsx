@@ -4,17 +4,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MENU, linkWhatsApp } from '@/content/site';
 import { IconeWhatsApp } from './Icones';
+import { Marca, type DadosMarca } from './Marca';
 
-export function Cabecalho() {
+export function Cabecalho({ marca }: { marca: DadosMarca }) {
   const caminho = usePathname();
   const ativo = (href: string) => caminho === href || caminho.startsWith(href + '/');
 
   return (
     <header className="cabecalho">
       <div className="container">
-        <Link href="/" className="marca">
-          Tiago Azevedo<span>.</span>
-        </Link>
+        <Marca marca={marca} />
         <nav className="menu" aria-label="Principal">
           {MENU.map((item) => (
             <Link key={item.href} href={item.href} aria-current={ativo(item.href) ? 'page' : undefined}>

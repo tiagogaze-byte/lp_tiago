@@ -8,6 +8,7 @@ import { CLIENTE_PADRAO, consulta, umaLinha } from '@/lib/db';
 import { ESTRUTURA_DO_BANCO } from '@/lib/schema';
 import type { ItemFaq, StatusArtigo } from '@/lib/tipos';
 import { gerarSlug, listaDeTexto } from '@/lib/util';
+import { temaPorId } from '@/lib/temas';
 
 export type Resultado = { ok: boolean; mensagem: string; id?: string };
 
@@ -239,4 +240,29 @@ export async function excluirEditoria(form: FormData) {
   await consulta('delete from editorias where id = $1 and cliente_id = $2', [id, clienteId]);
   revalidarBlog();
   redirect('/admin/editorias?excluida=1');
+}
+
+// ---------- Aparência (identidade e tema) ----------
+
+export async function salvarAparencia(_anterior: Resultado | null, form: FormData): Promise<Resultado> {
+  const { clienteId, perfil } = await exigirSessao();
+  if (perfil === 'editor') return { ok: false, mensagem: 'Só o dono ou um administrador pode mudar a aparência do site.' };
+
+  const nome = String(form.get('nome') || '').trim();
+  const slogan = String(form.get('slogan') || '').trim();
+  const tema = temaPorId(String(form.get('tema') || '')).id;
+  const logoUrl = String(form.get('logo_url') || '').trim() || null;
+  if (!nome) return { ok: false, mensagem: 'O site precisa de um nome.' };
+  if (nome.length > 40) return { ok: false, mensagem: 'Use um nome com até 40 caracteres.' };
+  if (slogan.length > 80) return { ok: false, mensagem: 'Use uma assinatura com até 80 caracteres.' };
+
+  try {
+    // Garante as colunas novas em bancos criados antes desta versão. Não apaga nada.
+    for (const comando of ESTRUTURA_DO_BANCO) await consulta(comando);
+    await consulta('update clientes set nome=$1, slogan=$2, tema=$3, logo_url=$4 where id=$5', [nome, slogan, tema, logoUrl, clienteId]);
+  } catch (erro) {
+    return { ok: false, mensagem: `Não foi possível salvar: ${(erro as Error).message}` };
+  }
+  revalidatePath('/', 'layout');
+  return { ok: true, mensagem: 'Aparência salva. O site já está com a cara nova.' };
 }

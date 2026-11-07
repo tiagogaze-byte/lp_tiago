@@ -1,37 +1,43 @@
 import type { Metadata, Viewport } from 'next';
 import { SITE } from '@/content/site';
+import { identidadeDoSite } from '@/lib/identidade';
+import { cssDoTema } from '@/lib/temas';
 import './globals.css';
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE.url),
-  title: {
-    default: `${SITE.nome} · ${SITE.assinatura}`,
-    template: `%s · ${SITE.nome}`,
-  },
-  description: SITE.descricao,
-  authors: [{ name: SITE.nome, url: SITE.url }],
-  alternates: { canonical: '/', types: { 'application/rss+xml': '/feed.xml' } },
-  openGraph: {
-    type: 'website',
-    locale: 'pt_BR',
-    siteName: SITE.nome,
-    title: `${SITE.nome} · ${SITE.assinatura}`,
+export async function generateMetadata(): Promise<Metadata> {
+  const { nome, slogan } = await identidadeDoSite();
+  return {
+    metadataBase: new URL(SITE.url),
+    title: {
+      default: `${nome} · ${slogan}`,
+      template: `%s · ${nome}`,
+    },
     description: SITE.descricao,
-  },
-  robots: { index: true, follow: true },
-};
+    authors: [{ name: nome, url: SITE.url }],
+    alternates: { canonical: '/', types: { 'application/rss+xml': '/feed.xml' } },
+    openGraph: {
+      type: 'website',
+      locale: 'pt_BR',
+      siteName: nome,
+      title: `${nome} · ${slogan}`,
+      description: SITE.descricao,
+    },
+    robots: { index: true, follow: true },
+  };
+}
 
-export const viewport: Viewport = {
-  themeColor: '#0f1014',
-  width: 'device-width',
-  initialScale: 1,
-  viewportFit: 'cover',
-};
+export async function generateViewport(): Promise<Viewport> {
+  const { tema } = await identidadeDoSite();
+  return { themeColor: tema.fundo, width: 'device-width', initialScale: 1, viewportFit: 'cover' };
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { tema } = await identidadeDoSite();
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" data-tema={tema.id}>
       <head>
+        {/* Cores do tema escolhido no painel (Aparência) */}
+        <style id="tema" dangerouslySetInnerHTML={{ __html: cssDoTema(tema) }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
