@@ -66,4 +66,5 @@ export type ConfigSite = {
   registro?: string; // ex.: CRP 04/44138, OAB/MG 123
   blog?: boolean;
   mensagem_whatsapp?: string;
+  favicon?: string; // ícone da aba enviado pelo cliente
 };

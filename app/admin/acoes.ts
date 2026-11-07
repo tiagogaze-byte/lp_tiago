@@ -292,6 +292,7 @@ export async function salvarIdentidade(_anterior: Resultado | null, form: FormDa
     cidade: texto('cidade'),
     registro: texto('registro'),
     blog: form.get('blog') === 'on',
+    favicon: texto('favicon_url'),
   };
 
   try {
@@ -311,7 +312,7 @@ export async function salvarIdentidade(_anterior: Resultado | null, form: FormDa
 // ---------- Páginas em blocos ----------
 
 const TIPOS_DE_BLOCO = ['topo', 'cartoes', 'texto', 'citacao', 'contato', 'chamada'];
-const RESERVADOS = ['admin', 'api', 'blog', 'imagens', 'feed.xml', 'sitemap.xml', 'robots.txt', 'llms.txt', 'privacidade', 'icon.svg', 'favicon.ico', 'apple-icon.png'];
+const RESERVADOS = ['admin', 'api', 'blog', 'imagens', 'feed.xml', 'sitemap.xml', 'robots.txt', 'llms.txt', 'privacidade', 'icon.svg', 'favicon.ico', 'apple-icon.png', 'icone.svg', 'icone-tiago.svg', 'apple-icone-tiago.png'];
 
 export async function criarPagina(form: FormData) {
   const { clienteId } = await exigirSessao();

@@ -24,6 +24,7 @@ export type Identidade = {
   nome: string;
   slogan: string;
   logoUrl: string | null;
+  faviconUrl: string | null; // ícone da aba enviado pelo cliente
   tema: Tema;
   fonte: string;
   contato: Contato;
@@ -47,6 +48,7 @@ const PADRAO: Identidade = {
   nome: SITE.nome,
   slogan: SITE.assinatura,
   logoUrl: null,
+  faviconUrl: null,
   tema: temaPorId(null),
   fonte: 'moderna',
   contato: CONTATO_PADRAO,
@@ -124,6 +126,7 @@ export const identidadeDoSite = cache(async (): Promise<Identidade> => {
     nome,
     slogan: linha.slogan || (usaPaginas ? '' : PADRAO.slogan),
     logoUrl: linha.logo_url || null,
+    faviconUrl: config.favicon || null,
     tema: temaPorId(linha.tema),
     fonte: fontePorId(linha.fonte).id,
     contato: contatoDoConfig(config, nome),

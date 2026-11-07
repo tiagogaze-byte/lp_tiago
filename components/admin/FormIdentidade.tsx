@@ -4,11 +4,14 @@ import { useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { salvarIdentidade, type Resultado } from '@/app/admin/acoes';
 import { FONTES, variaveisDoTema, type Tema } from '@/lib/temas';
+import { iconeSvg } from '@/lib/icone';
 
 type Inicial = {
   nome: string;
   slogan: string;
   logoUrl: string | null;
+  faviconUrl: string | null;
+  iconeFixo: string | null; // ícone padrão que não é gerado (o "t." do Tiago)
   tema: string;
   fonte: string;
   whatsapp: string;
@@ -35,35 +38,41 @@ export function FormIdentidade({ temas, inicial }: { temas: Tema[]; inicial: Ini
   const [logoUrl, setLogoUrl] = useState(inicial.logoUrl || '');
   const [temaId, setTemaId] = useState(inicial.tema);
   const [fonteId, setFonteId] = useState(inicial.fonte);
-  const [enviando, setEnviando] = useState(false);
-  const [erroLogo, setErroLogo] = useState('');
+  const [faviconUrl, setFaviconUrl] = useState(inicial.faviconUrl || '');
+  const [enviando, setEnviando] = useState<'' | 'logo' | 'favicon'>('');
+  const [erro, setErro] = useState<{ campo: string; texto: string } | null>(null);
 
   const tema = temas.find((t) => t.id === temaId) || temas[0];
   const fonte = FONTES.find((f) => f.id === fonteId) || FONTES[0];
 
-  async function enviarLogo(arquivo: File) {
-    setErroLogo('');
-    setEnviando(true);
+  async function enviarImagem(arquivo: File, campo: 'logo' | 'favicon') {
+    setErro(null);
+    setEnviando(campo);
     const dados = new FormData();
     dados.append('arquivo', arquivo);
-    dados.append('nome', 'logo');
+    dados.append('nome', campo);
     try {
       const resposta = await fetch('/api/upload', { method: 'POST', body: dados });
       const json = (await resposta.json()) as { url?: string; erro?: string };
-      if (!resposta.ok || !json.url) setErroLogo(json.erro || 'Não foi possível enviar a logo.');
-      else setLogoUrl(json.url);
+      if (!resposta.ok || !json.url) setErro({ campo, texto: json.erro || 'Não foi possível enviar a imagem.' });
+      else if (campo === 'logo') setLogoUrl(json.url);
+      else setFaviconUrl(json.url);
     } catch {
-      setErroLogo('Não foi possível enviar a logo. Confira sua conexão e tente de novo.');
+      setErro({ campo, texto: 'Não foi possível enviar a imagem. Confira sua conexão e tente de novo.' });
     } finally {
-      setEnviando(false);
+      setEnviando('');
     }
   }
+
+  // O que vai aparecer na aba do navegador.
+  const iconeAtual = faviconUrl || inicial.iconeFixo || `data:image/svg+xml;utf8,${encodeURIComponent(iconeSvg(nome || 'S', tema, fonteId))}`;
 
   return (
     <form action={acao} className="aparencia">
       <input type="hidden" name="tema" value={temaId} />
       <input type="hidden" name="fonte" value={fonteId} />
       <input type="hidden" name="logo_url" value={logoUrl} />
+      <input type="hidden" name="favicon_url" value={faviconUrl} />
 
       <div className="aparencia-campos">
         <section className="painel" style={{ gap: 14 }}>
@@ -82,15 +91,15 @@ export function FormIdentidade({ temas, inicial }: { temas: Tema[]; inicial: Ini
           </div>
           <div className="campo">
             <label htmlFor="logo">
-              Logo <small>opcional · PNG ou SVG com fundo transparente, na horizontal</small>
+              Logo <small>opcional · PNG ou WebP com fundo transparente, na horizontal</small>
             </label>
             <div className="linha-acoes" style={{ justifyContent: 'flex-start' }}>
               <input
                 id="logo"
                 type="file"
                 accept="image/png,image/webp,image/jpeg,image/avif,image/gif"
-                disabled={enviando}
-                onChange={(e) => e.target.files?.[0] && enviarLogo(e.target.files[0])}
+                disabled={Boolean(enviando)}
+                onChange={(e) => e.target.files?.[0] && enviarImagem(e.target.files[0], 'logo')}
               />
               {logoUrl && (
                 <button type="button" className="botao-texto" onClick={() => setLogoUrl('')}>
@@ -98,8 +107,34 @@ export function FormIdentidade({ temas, inicial }: { temas: Tema[]; inicial: Ini
                 </button>
               )}
             </div>
-            {enviando && <small>Enviando a logo...</small>}
-            {erroLogo && <small style={{ color: 'var(--vermelho)' }}>{erroLogo}</small>}
+            {enviando === 'logo' && <small>Enviando a logo...</small>}
+            {erro?.campo === 'logo' && <small style={{ color: 'var(--vermelho)' }}>{erro.texto}</small>}
+          </div>
+          <div className="campo">
+            <label htmlFor="favicon">
+              Ícone da aba <small>opcional · imagem quadrada, 512 × 512 px · sem enviar, usa a inicial nas cores do tema</small>
+            </label>
+            <div className="linha-acoes" style={{ justifyContent: 'flex-start' }}>
+              <span className="icone-previa" aria-label="Prévia do ícone na aba">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={iconeAtual} alt="" width={20} height={20} />
+                <span>{nome || 'Seu site'}</span>
+              </span>
+              <input
+                id="favicon"
+                type="file"
+                accept="image/png,image/webp,image/jpeg,image/avif"
+                disabled={Boolean(enviando)}
+                onChange={(e) => e.target.files?.[0] && enviarImagem(e.target.files[0], 'favicon')}
+              />
+              {faviconUrl && (
+                <button type="button" className="botao-texto" onClick={() => setFaviconUrl('')}>
+                  Voltar ao ícone automático
+                </button>
+              )}
+            </div>
+            {enviando === 'favicon' && <small>Enviando o ícone...</small>}
+            {erro?.campo === 'favicon' && <small style={{ color: 'var(--vermelho)' }}>{erro.texto}</small>}
           </div>
         </section>
 

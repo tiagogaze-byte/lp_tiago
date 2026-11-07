@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { SITE } from '@/content/site';
 import { identidadeDoSite } from '@/lib/identidade';
 import { cssDoTema } from '@/lib/temas';
+import { CLIENTE_PADRAO } from '@/lib/db';
 import './globals.css';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -17,7 +18,16 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: { canonical: '/', types: id.blogAtivo ? { 'application/rss+xml': '/feed.xml' } : undefined },
     openGraph: { type: 'website', locale: 'pt_BR', siteName: nome, title: titulo, description: descricao },
     robots: { index: true, follow: true },
+    icons: iconesDoSite(id),
   };
+}
+
+// Ícone da aba: o enviado pelo cliente; senão o "t." do Tiago; senão a inicial gerada com as cores do tema.
+function iconesDoSite(id: Awaited<ReturnType<typeof identidadeDoSite>>): Metadata['icons'] {
+  if (id.faviconUrl) return { icon: id.faviconUrl, apple: id.faviconUrl };
+  if (CLIENTE_PADRAO === 'tiagogaze') return { icon: '/icone-tiago.svg', apple: '/apple-icone-tiago.png' };
+  const versao = encodeURIComponent(`${id.nome}-${id.tema.id}-${id.fonte}`); // troca o ícone na aba quando o tema muda
+  return { icon: { url: `/icone.svg?v=${versao}`, type: 'image/svg+xml' } };
 }
 
 export async function generateViewport(): Promise<Viewport> {

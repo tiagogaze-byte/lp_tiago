@@ -2,6 +2,7 @@ import { FormIdentidade } from '@/components/admin/FormIdentidade';
 import { exigirSessao } from '@/lib/auth';
 import { identidadeDoSite } from '@/lib/identidade';
 import { TEMAS } from '@/lib/temas';
+import { CLIENTE_PADRAO } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,8 @@ export default async function Identidade() {
           nome: id.nome,
           slogan: id.slogan,
           logoUrl: id.logoUrl,
+          faviconUrl: id.faviconUrl,
+          iconeFixo: CLIENTE_PADRAO === 'tiagogaze' ? '/icone-tiago.svg' : null,
           tema: id.tema.id,
           fonte: id.fonte,
           whatsapp: id.contato.whatsappExibicao,
