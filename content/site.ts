@@ -3,7 +3,13 @@
 export const SITE = {
   nome: 'Tiago Azevedo',
   assinatura: 'Estratégia Narrativa e IA Aplicada',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.tiagogaze.com.br',
+  // Endereço oficial do site. Outros clientes: NEXT_PUBLIC_SITE_URL na Vercel; sem ela, o endereço de produção que a Vercel informa.
+  url: (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.CLIENTE_SLUG && process.env.CLIENTE_SLUG !== 'tiagogaze' && process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : 'https://www.tiagogaze.com.br')
+  ).replace(/\/$/, ''),
   descricao:
     'O gap entre o que você faz e o que o mercado percebe está custando caro. Tiago Azevedo fecha esse gap com estratégia narrativa e IA aplicada.',
   whatsapp: '5531997180531',
